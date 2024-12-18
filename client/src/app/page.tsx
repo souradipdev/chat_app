@@ -42,6 +42,8 @@ function Page() {
       });
     });
 
+
+
     return () => {
       if (socket.connected) {
         socket.disconnect();
@@ -53,6 +55,8 @@ function Page() {
   const handleJoinRoom = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     console.log("Joined Room:", roomName);
+
+    socketRef.current?.emit("join-room", roomName);
   };
 
   const handleSendMessage = (e: React.FormEvent<HTMLFormElement>) => {
@@ -99,12 +103,14 @@ function Page() {
               <form onSubmit={handleSendMessage} className="flex items-center gap-2">
                 <Input
                   placeholder="Message"
+                  required={true}
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
                   className="flex-1"
                 />
                 <Input
                   placeholder="To Socket ID"
+                  required={true}
                   value={toSocketId}
                   onChange={(e) => setToSocketId(e.target.value)}
                   className="w-1/3"

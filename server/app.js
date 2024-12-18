@@ -18,12 +18,6 @@ const io = new Server(server, {
   }
 });
 
-/*
-app.get("/", (req, res) => {
-  res.send("Hi Souradip!");
-});
-*/
-
 io.on("connection", (socket)=> {
   console.log("Connected to socket ", socket.id);
 
@@ -32,6 +26,18 @@ io.on("connection", (socket)=> {
     io.to(id).emit("receive-message", message);
 
   });
+
+
+
+  socket.on("join-room", (rooName) => {
+    socket.join(rooName);
+
+    console.log(`Room ${rooName} joined successfully`);
+  })
+
+  socket.on("send-room-message", (roomName, message) => {
+    socket.to(roomName).emit(message);
+  })
 
   socket.on("disconnect", () => {
     console.log("Socket disconnected: ", socket.id);
