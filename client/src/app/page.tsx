@@ -46,8 +46,11 @@ function Page() {
       console.log("Room message ",recvMessage);
 
       setMessages((prev: Array<Messages>) => {
-        const receive: Messages = prev.slice(-1)[0];
-        receive.receiver = recvMessage;
+        if(prev.length > 0) {
+          const receive: Messages = prev.slice(-1)[0];
+          receive.receiver = recvMessage;
+
+        }
         return [...prev];
       });
     })
