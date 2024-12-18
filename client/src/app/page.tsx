@@ -6,7 +6,7 @@ import {Button} from "@/components/ui/button";
 import {Card, CardHeader, CardContent, CardFooter} from "@/components/ui/card";
 import {ScrollArea} from "@/components/ui/scroll-area";
 
-interface Message {
+interface Messages {
   sender?: string
   receiver?: string
 }
@@ -18,11 +18,14 @@ function Page() {
   const [message, setMessage] = useState<string>("");
   const [toSocketId, setToSocketId] = useState<string>("");
 
-  const [messages, setMessages] = useState<Array<Message>>([]);
+  const [messages, setMessages] = useState<Array<Messages>>([{
+    sender: "Hi",
+    receiver: "Hello "
+  }]);
 
   const socket: Socket = useMemo(() =>
       io(process.env.NEXT_PUBLIC_SERVER_ORIGIN, {
-        withCredentials: true
+        withCredentials: true,
       })
     , []);
 
@@ -33,28 +36,42 @@ function Page() {
       console.log(`Socked ${socket.id} successfully connected`)
     })
 
-    socket.on("message-recv", ({receiver}: Message) => {
-      setMessages((prev: Array<Message>) => [...prev, {receiver}])
+    socket.on("receive-message", (message: string) => {
+      console.log(message);
+
+      setMessages((prev: Array<Messages>) => {
+        const receive: Messages = prev.slice(-1)[0];
+        receive.receiver = message;
+
+        return [...prev];
+      })
     })
 
     return () => {
+      console.log(`Socket disconnected successfully`);
       socket.connected && socket.disconnect();
     }
   }, []);
 
+  useEffect(() => {
+    console.log(messages)
+  }, [messages]);
 
-  const handleJoinRoom = () => {
+  const handleJoinRoom = (e: any) => {
+    e.preventDefault();
     // Logic for joining a room
     console.log("Joined Room:", roomName);
   };
 
-  const handleSendMessage = () => {
+  const handleSendMessage = (e: any) => {
+    e.preventDefault();
     const newMessage = {
       sender: message,
     };
 
-    socket.emit("message", newMessage, socket.id);
-    setMessages((prev) => [...prev, newMessage]);
+    setMessages(prev => [...prev, newMessage])
+    socket.emit("message", message, socket.id);
+
     setMessage("");
   };
 
@@ -73,20 +90,20 @@ function Page() {
           <CardContent>
             <div className="space-y-4">
               {/* Room Name Input */}
-              <div className="flex items-center gap-2">
+              <form onSubmit={handleJoinRoom} className="flex items-center gap-2">
                 <Input
                   placeholder="Room Name"
                   value={roomName}
                   onChange={(e) => setRoomName(e.target.value)}
                   className="flex-1"
                 />
-                <Button onClick={handleJoinRoom} className="bg-blue-500">
+                <Button type={"submit"} className="bg-blue-500">
                   JOIN
                 </Button>
-              </div>
+              </form>
 
-              {/* Message Input */}
-              <div className="flex items-center gap-2">
+              {/* Messages Input */}
+              <form onSubmit={handleSendMessage} className="flex items-center gap-2">
                 <Input
                   placeholder="Message"
                   value={message}
@@ -99,37 +116,46 @@ function Page() {
                   onChange={(e) => setToSocketId(e.target.value)}
                   className="w-1/3"
                 />
-                <Button onClick={handleSendMessage} className="bg-blue-500">
+                <Button type={"submit"} className="bg-blue-500">
                   SEND
                 </Button>
-              </div>
+              </form>
             </div>
           </CardContent>
 
-          <CardFooter>
-            {/* Message Display Area */}
-            <ScrollArea className="w-full h-48 border border-gray-200 rounded-md p-2 dark:border-gray-700">
-              <ul className="space-y-2">
+          <CardFooter className={"w-full"}>
+            {/* Messages Display Area */}
+            <div className="w-full h-96 border border-gray-200 rounded-md p-2 dark:border-gray-700 overflow-scroll overflow-x-clip">
+              <ul className="space-y-2 w-full">
                 {messages.map((msg, index) => (
                   <li
                     key={index}
                     className="flex justify-between p-2 rounded-md bg-gray-50 dark:bg-gray-800"
                   >
-                    <div className="w-full flex justify-between items-center p-2">
-                      {/* Sender (left-aligned) */}
-                      <span className="font-semibold text-gray-700 dark:text-gray-300">
+                    <div className="w-full flex flex-col  justify-between items-center p-2">
+                      {/* Sender */}
+                      <span
+                        className="font-semibold p-2 rounded-sm self-start mr-4 text-gray-700 dark:text-gray-300
+                         text-left w-11/12 break-words"
+                      >
                         {msg.sender}
                       </span>
 
-                      {/* Receiver (right-aligned) */}
-                      <span className="ml-4 font-semibold text-gray-700 dark:text-gray-300">
-                        {msg.receiver}
-                      </span>
+                      {/* Receiver */}
+                      {msg.receiver && (
+                        <span
+                          className="p-2 rounded-sm ml-4 font-semibold self-end text-gray-700 dark:text-gray-300
+                          text-right bg-blue-200 w-11/12 break-words "
+                        >
+                          {msg.receiver}
+                        </span>
+                      )}
                     </div>
                   </li>
                 ))}
               </ul>
-            </ScrollArea>
+
+            </div>
           </CardFooter>
         </Card>
       </div>

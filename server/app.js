@@ -27,10 +27,11 @@ app.get("/", (req, res) => {
 io.on("connection", (socket)=> {
   console.log("Connected to socket ", socket.id);
 
-  socket.on("message", ({from, to, content}) => {
-    // console.log();
-    socket.to(to).emit("message-recv", {from, to, content});
-  })
+  socket.on("message", (message, id) => {
+    console.log({message, id});
+    socket.to(id).emit("receive-message", message);
+
+  });
 
   socket.on("disconnect", () => {
     console.log("Socket disconnected: ", socket.id);

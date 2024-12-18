@@ -26,13 +26,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-    <React.StrictMode>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         {children}
       </body>
-    </React.StrictMode>
     </html>
   );
 }
