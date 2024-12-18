@@ -51,7 +51,7 @@ function Page() {
           receive.receiver = recvMessage;
 
         }
-        return [...prev];
+        return prev;
       });
     })
 
