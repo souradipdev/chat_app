@@ -42,7 +42,15 @@ function Page() {
       });
     });
 
+    socket.on("receive-room-message", (recvMessage: string) => {
+      console.log("Room message ",recvMessage);
 
+      setMessages((prev: Array<Messages>) => {
+        const receive: Messages = prev.slice(-1)[0];
+        receive.receiver = recvMessage;
+        return [...prev];
+      });
+    })
 
     return () => {
       if (socket.connected) {
@@ -67,11 +75,21 @@ function Page() {
 
     setMessages((prev) => [...prev, newMessage]);
 
-    // Use the socket instance from useRef
     socketRef.current?.emit("message", message, toSocketId);
 
     setMessage("");
   };
+
+  const handleSendRoomMessage = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const newMessage = {
+      sender: message,
+    };
+
+    setMessages((prev) => [...prev, newMessage]);
+    socketRef.current?.emit("send-room-message",roomName, message);
+    setMessage("")
+  }
 
   return (
     <div className={"bg-accent text-accent-foreground h-screen w-screen"}>
@@ -119,6 +137,26 @@ function Page() {
                   SEND
                 </Button>
               </form>
+
+              <form onSubmit={handleSendRoomMessage} className="flex items-center gap-2">
+                <Input
+                  placeholder="Message"
+                  required={true}
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  className="flex-1"
+                />
+                <Input
+                  placeholder="Room Name"
+                  required={true}
+                  value={roomName}
+                  onChange={(e) => setRoomName(e.target.value)}
+                  className="w-1/3"
+                />
+                <Button type={"submit"} className="bg-blue-500">
+                  SEND
+                </Button>
+              </form>
             </div>
           </CardContent>
 
@@ -136,7 +174,7 @@ function Page() {
                       {/* Sender */}
                       <span
                         className="font-semibold p-2 rounded-sm self-start mr-4 text-gray-700 dark:text-gray-300
-                         text-left w-11/12 break-words"
+                         text-left min-w-fit max-w-11/12 break-words"
                       >
                         {msg.sender}
                       </span>
@@ -145,7 +183,7 @@ function Page() {
                       {msg.receiver && (
                         <span
                           className="p-2 rounded-sm ml-4 font-semibold self-end text-gray-700 dark:text-gray-300
-                          text-right bg-blue-200 w-11/12 break-words "
+                          text-right bg-blue-200 min-w-fit max-w-11/12 break-words "
                         >
                           {msg.receiver}
                         </span>
