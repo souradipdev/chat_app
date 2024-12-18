@@ -24,7 +24,7 @@ export default function ChatWindow() {
         </div>
         <div className="flex justify-end">
           <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg p-3 max-w-xs lg:max-w-md">
-            <p className="text-white">I'm good, thanks! How about you?</p>
+            <p className="text-white">I&apos;m good, thanks! How about you?</p>
             <span className="text-xs text-blue-200 mt-1">10:02 AM</span>
           </div>
         </div>

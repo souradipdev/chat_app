@@ -1,40 +1,36 @@
-"use client"
-import React, {useEffect, useMemo, useState} from 'react';
+"use client";
+import React, {useEffect, useRef, useState} from "react";
 import {io, Socket} from "socket.io-client";
 import {Input} from "@/components/ui/input";
 import {Button} from "@/components/ui/button";
 import {Card, CardHeader, CardContent, CardFooter} from "@/components/ui/card";
-import {ScrollArea} from "@/components/ui/scroll-area";
 
 interface Messages {
-  sender?: string
-  receiver?: string
+  sender?: string;
+  receiver?: string;
 }
 
 function Page() {
-
-  const [socketId, setSocketId] = useState<string>("");
+  const [socketId, setSocketId] = useState<string | undefined>("");
   const [roomName, setRoomName] = useState<string>("");
   const [message, setMessage] = useState<string>("");
   const [toSocketId, setToSocketId] = useState<string>("");
 
-  const [messages, setMessages] = useState<Array<Messages>>([{
-    sender: "Hi",
-    receiver: "Hello "
-  }]);
+  const [messages, setMessages] = useState<Array<Messages>>([]);
 
-  const socket: Socket = useMemo(() =>
-      io(process.env.NEXT_PUBLIC_SERVER_ORIGIN, {
-        withCredentials: true,
-      })
-    , []);
+  const socketRef = useRef<Socket | null>(null);
 
   useEffect(() => {
+    socketRef.current = io(process.env.NEXT_PUBLIC_SERVER_ORIGIN, {
+      withCredentials: true,
+    });
+
+    const socket: Socket = socketRef.current;
 
     socket.on("connect", () => {
-      setSocketId(String(socket.id));
-      console.log(`Socked ${socket.id} successfully connected`)
-    })
+      setSocketId(socket.id);
+      console.log(`Socket ${socket.id} successfully connected`);
+    });
 
     socket.on("receive-message", (message: string) => {
       console.log(message);
@@ -42,39 +38,36 @@ function Page() {
       setMessages((prev: Array<Messages>) => {
         const receive: Messages = prev.slice(-1)[0];
         receive.receiver = message;
-
         return [...prev];
-      })
-    })
+      });
+    });
 
     return () => {
+      if (socket.connected) {
+        socket.disconnect();
+      }
       console.log(`Socket disconnected successfully`);
-      socket.connected && socket.disconnect();
-    }
+    };
   }, []);
 
-  useEffect(() => {
-    console.log(messages)
-  }, [messages]);
-
-  const handleJoinRoom = (e: any) => {
+  const handleJoinRoom = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    // Logic for joining a room
     console.log("Joined Room:", roomName);
   };
 
-  const handleSendMessage = (e: any) => {
+  const handleSendMessage = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const newMessage = {
       sender: message,
     };
 
-    setMessages(prev => [...prev, newMessage])
-    socket.emit("message", message, socket.id);
+    setMessages((prev) => [...prev, newMessage]);
+
+    // Use the socket instance from useRef
+    socketRef.current?.emit("message", message, toSocketId);
 
     setMessage("");
   };
-
 
   return (
     <div className={"bg-accent text-accent-foreground h-screen w-screen"}>
@@ -125,14 +118,15 @@ function Page() {
 
           <CardFooter className={"w-full"}>
             {/* Messages Display Area */}
-            <div className="w-full h-96 border border-gray-200 rounded-md p-2 dark:border-gray-700 overflow-scroll overflow-x-clip">
+            <div
+              className="w-full h-96 border border-gray-200 rounded-md p-2 dark:border-gray-700 overflow-scroll overflow-x-clip">
               <ul className="space-y-2 w-full">
                 {messages.map((msg, index) => (
                   <li
                     key={index}
                     className="flex justify-between p-2 rounded-md bg-gray-50 dark:bg-gray-800"
                   >
-                    <div className="w-full flex flex-col  justify-between items-center p-2">
+                    <div className="w-full flex flex-col justify-between items-center p-2">
                       {/* Sender */}
                       <span
                         className="font-semibold p-2 rounded-sm self-start mr-4 text-gray-700 dark:text-gray-300
@@ -154,7 +148,6 @@ function Page() {
                   </li>
                 ))}
               </ul>
-
             </div>
           </CardFooter>
         </Card>
