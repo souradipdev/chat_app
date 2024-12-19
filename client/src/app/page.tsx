@@ -3,7 +3,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { io, Socket } from "socket.io-client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card";
+import { Card, CardHeader, CardContent} from "@/components/ui/card";
 
 interface Message {
   text: string;
