@@ -1,6 +1,6 @@
 import express from "express";
-import {Server} from "socket.io";
-import {createServer} from "http";
+import { Server } from "socket.io";
+import { createServer } from "http";
 import cookieParser from "cookie-parser";
 import env from "dotenv";
 
@@ -14,41 +14,44 @@ const io = new Server(server, {
   cors: {
     origin: process.env.CLIENT_ORIGIN,
     methods: ["GET", "POST"],
-    credentials: true
-  }
+    credentials: true,
+  },
 });
 
-io.on("connection", (socket)=> {
+io.on("connection", (socket) => {
   console.log("Connected to socket ", socket.id);
 
-  socket.on("message", (message, id) => {
-    console.log({message, id});
-    io.to(id).emit("receive-message", message);
+  socket.on("join-room", (roomName) => {
+    socket.join(roomName);
+    console.log(`Socket  ${socket.id} connected to room ${roomName}`)
+  })
 
+  socket.on("message", (message, id, callback) => {
+    console.log("Message received:", { message, id });
+    if (io.sockets.sockets.get(id)) {
+      io.to(id).emit("receive-message", message);
+      callback(null, "Message delivered successfully.");
+    } else {
+      callback(new Error("Recipient not connected."));
+    }
   });
 
 
-
-  socket.on("join-room", (rooName) => {
-    socket.join(rooName);
-
-    console.log(`Room ${rooName} joined successfully`);
-  })
-
-  socket.on("send-room-message", (roomName, message) => {
-    console.log("Room name and message ",roomName, message);
-   // socket.to(roomName).emit("receive-room-message", message);
-   socket.broadcast.emit("receive-room-message", message);
-  })
+  socket.on("send-room-message", (roomName, message, callback) => {
+    console.log("Room Message Event Triggered:", { roomName, message }); // Debug log
+    if (io.sockets.adapter.rooms.get(roomName)) {
+      socket.to(roomName).emit("receive-room-message", message);
+      callback(null, `Message sent to room successfully. ${message}`);
+    } else {
+      callback(new Error("Room does not exist."));
+    }
+  });
 
   socket.on("disconnect", () => {
     console.log("Socket disconnected: ", socket.id);
-  })
-
-})
-
+  });
+});
 
 server.listen(port, () => {
   console.log("Server running at port ", port);
-})
-
+});

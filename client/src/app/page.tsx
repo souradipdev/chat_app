@@ -1,9 +1,9 @@
 "use client";
-import React, { useEffect, useRef, useState } from "react";
-import { io, Socket } from "socket.io-client";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardContent} from "@/components/ui/card";
+import React, {useEffect, useRef, useState} from "react";
+import {io, Socket} from "socket.io-client";
+import {Input} from "@/components/ui/input";
+import {Button} from "@/components/ui/button";
+import {Card, CardHeader, CardContent} from "@/components/ui/card";
 
 interface Message {
   text: string;
@@ -33,12 +33,12 @@ function ChatPage() {
 
     socket.on("receive-message", (receivedMessage: string) => {
       console.log("Received Message: ", receivedMessage);
-      setMessages((prev) => [...prev, { text: receivedMessage, sender: "receiver" }]);
+      setMessages((prev) => [...prev, {text: receivedMessage, sender: "receiver"}]);
     });
 
     socket.on("receive-room-message", (roomMessage: string) => {
       console.log("Room Message: ", roomMessage);
-      setMessages((prev) => [...prev, { text: roomMessage, sender: "receiver" }]);
+      setMessages((prev) => [...prev, {text: roomMessage, sender: "receiver"}]);
     });
 
     return () => {
@@ -57,15 +57,37 @@ function ChatPage() {
 
   const handleSendMessage = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setMessages((prev) => [...prev, { text: message, sender: "user" }]);
-    socketRef.current?.emit("message", message, toSocketId);
+
+    setMessages((prev) => [...prev, {text: message, sender: "user"}]);
+    socketRef.current
+    ?.timeout(3000)
+    .emit("message", message, toSocketId, (err: Error | null, response: string) => {
+      if (err) {
+        console.error("Error sending message:", err.message);
+      } else {
+        console.log("Message sent successfully:", response);
+      }
+    });
     setMessage("");
   };
 
   const handleSendRoomMessage = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setMessages((prev) => [...prev, { text: message, sender: "user" }]);
-    socketRef.current?.emit("send-room-message", roomName, message);
+    setMessages((prev) => [...prev, {text: message, sender: "user"}]);
+
+    socketRef.current?.timeout(3000).emit(
+      "send-room-message",
+      roomName,
+      message,
+      (err: Error | null, response: string) => {
+        if (err) {
+          console.error("Error sending message:", err.message);
+        } else {
+          console.log("Message sent successfully:", response);
+        }
+      }
+    );
+
     setMessage("");
   };
 
