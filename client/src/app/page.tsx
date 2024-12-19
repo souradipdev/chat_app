@@ -1,22 +1,21 @@
 "use client";
-import React, {useEffect, useRef, useState} from "react";
-import {io, Socket} from "socket.io-client";
-import {Input} from "@/components/ui/input";
-import {Button} from "@/components/ui/button";
-import {Card, CardHeader, CardContent, CardFooter} from "@/components/ui/card";
+import React, { useEffect, useRef, useState } from "react";
+import { io, Socket } from "socket.io-client";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card";
 
-interface Messages {
-  sender?: string;
-  receiver?: string;
+interface Message {
+  text: string;
+  sender: "user" | "receiver";
 }
 
-function Page() {
+function ChatPage() {
   const [socketId, setSocketId] = useState<string | undefined>("");
   const [roomName, setRoomName] = useState<string>("");
-  const [message, setMessage] = useState<string>("");
   const [toSocketId, setToSocketId] = useState<string>("");
-
-  const [messages, setMessages] = useState<Array<Messages>>([]);
+  const [message, setMessage] = useState<string>("");
+  const [messages, setMessages] = useState<Message[]>([]);
 
   const socketRef = useRef<Socket | null>(null);
 
@@ -32,28 +31,15 @@ function Page() {
       console.log(`Socket ${socket.id} successfully connected`);
     });
 
-    socket.on("receive-message", (message: string) => {
-      console.log(message);
-
-      setMessages((prev: Array<Messages>) => {
-        const receive: Messages = prev.slice(-1)[0];
-        receive.receiver = message;
-        return [...prev];
-      });
+    socket.on("receive-message", (receivedMessage: string) => {
+      console.log("Received Message: ", receivedMessage);
+      setMessages((prev) => [...prev, { text: receivedMessage, sender: "receiver" }]);
     });
 
-    socket.on("receive-room-message", (recvMessage: string) => {
-      console.log("Room message ",recvMessage);
-
-      setMessages((prev: Array<Messages>) => {
-        if(prev.length > 0) {
-          const receive: Messages = prev.slice(-1)[0];
-          receive.receiver = recvMessage;
-
-        }
-        return prev;
-      });
-    })
+    socket.on("receive-room-message", (roomMessage: string) => {
+      console.log("Room Message: ", roomMessage);
+      setMessages((prev) => [...prev, { text: roomMessage, sender: "receiver" }]);
+    });
 
     return () => {
       if (socket.connected) {
@@ -66,141 +52,114 @@ function Page() {
   const handleJoinRoom = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     console.log("Joined Room:", roomName);
-
     socketRef.current?.emit("join-room", roomName);
   };
 
   const handleSendMessage = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const newMessage = {
-      sender: message,
-    };
-
-    setMessages((prev) => [...prev, newMessage]);
-
+    setMessages((prev) => [...prev, { text: message, sender: "user" }]);
     socketRef.current?.emit("message", message, toSocketId);
-
     setMessage("");
   };
 
   const handleSendRoomMessage = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const newMessage = {
-      sender: message,
-    };
-
-    setMessages((prev) => [...prev, newMessage]);
-    socketRef.current?.emit("send-room-message",roomName, message);
-    setMessage("")
-  }
+    setMessages((prev) => [...prev, { text: message, sender: "user" }]);
+    socketRef.current?.emit("send-room-message", roomName, message);
+    setMessage("");
+  };
 
   return (
-    <div className={"bg-accent text-accent-foreground h-screen w-screen"}>
-      <div className="flex flex-col items-center justify-center h-full w-full bg-gray-100 dark:bg-gray-900 ">
-        {/* Card for the UI */}
-        <Card className="w-full max-w-3xl shadow-md">
-          <CardHeader className="text-center">
-            <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-300">
-              Socket ID: <span className="text-blue-600">{socketId}</span>
-            </h2>
-          </CardHeader>
+    <div className="bg-gray-100 text-gray-900 h-screen w-screen flex items-center justify-center">
+      <Card className="w-3/5 h-full flex flex-col shadow-md">
+        <CardHeader className="px-4 py-2 bg-blue-500 text-white text-center">
+          <h2 className="text-lg font-semibold">Chat Room</h2>
+          <p className="text-sm">Socket ID: {socketId}</p>
+        </CardHeader>
 
-          <CardContent>
-            <div className="space-y-4">
-              {/* Room Name Input */}
-              <form onSubmit={handleJoinRoom} className="flex items-center gap-2">
-                <Input
-                  placeholder="Room Name"
-                  value={roomName}
-                  onChange={(e) => setRoomName(e.target.value)}
-                  className="flex-1"
-                />
-                <Button type={"submit"} className="bg-blue-500">
-                  JOIN
-                </Button>
-              </form>
+        <CardContent className="p-4 space-y-4">
+          {/* Join Room Form */}
+          <form onSubmit={handleJoinRoom} className="flex items-center gap-2">
+            <Input
+              placeholder="Room Name"
+              value={roomName}
+              onChange={(e) => setRoomName(e.target.value)}
+              className="flex-1"
+            />
+            <Button type="submit" className="bg-green-500">
+              Join Room
+            </Button>
+          </form>
 
-              {/* Messages Input */}
-              <form onSubmit={handleSendMessage} className="flex items-center gap-2">
-                <Input
-                  placeholder="Message"
-                  required={true}
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  className="flex-1"
-                />
-                <Input
-                  placeholder="To Socket ID"
-                  required={true}
-                  value={toSocketId}
-                  onChange={(e) => setToSocketId(e.target.value)}
-                  className="w-1/3"
-                />
-                <Button type={"submit"} className="bg-blue-500">
-                  SEND
-                </Button>
-              </form>
+          {/* Direct Message Form */}
+          <form onSubmit={handleSendMessage} className="flex items-center gap-2">
+            <Input
+              placeholder="Message"
+              required
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              className="flex-1"
+            />
+            <Input
+              placeholder="To Socket ID"
+              required
+              value={toSocketId}
+              onChange={(e) => setToSocketId(e.target.value)}
+              className="w-1/3"
+            />
+            <Button type="submit" className="bg-blue-500">
+              Send
+            </Button>
+          </form>
 
-              <form onSubmit={handleSendRoomMessage} className="flex items-center gap-2">
-                <Input
-                  placeholder="Message"
-                  required={true}
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  className="flex-1"
-                />
-                <Input
-                  placeholder="Room Name"
-                  required={true}
-                  value={roomName}
-                  onChange={(e) => setRoomName(e.target.value)}
-                  className="w-1/3"
-                />
-                <Button type={"submit"} className="bg-blue-500">
-                  SEND
-                </Button>
-              </form>
-            </div>
-          </CardContent>
+          {/* Room Message Form */}
+          <form onSubmit={handleSendRoomMessage} className="flex items-center gap-2">
+            <Input
+              placeholder="Message"
+              required
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              className="flex-1"
+            />
+            <Input
+              placeholder="Room Name"
+              required
+              value={roomName}
+              onChange={(e) => setRoomName(e.target.value)}
+              className="w-1/3"
+            />
+            <Button type="submit" className="bg-blue-500">
+              Send to Room
+            </Button>
+          </form>
+        </CardContent>
 
-          <CardFooter className={"w-full"}>
-            {/* Messages Display Area */}
-            <div
-              className="w-full h-96 border border-gray-200 rounded-md p-2 dark:border-gray-700 overflow-scroll overflow-x-clip">
-              <ul className="space-y-2 w-full">
-                {messages.map((msg, index) => (
-                  <li
-                    key={index}
-                    className="flex justify-between p-2 rounded-md bg-gray-50 dark:bg-gray-800"
-                  >
-                    <div className="w-full flex flex-col justify-between items-center p-2">
-                      {/* Sender */}
-                      <span
-                        className="font-semibold p-2 rounded-sm self-start mr-4 text-gray-700 dark:text-gray-300
-                         text-left min-w-fit max-w-11/12 break-words"
-                      >
-                        {msg.sender}
-                      </span>
-
-                      {/* Receiver */}
-                      {msg.receiver && (
-                        <span
-                          className="p-2 rounded-sm ml-4 font-semibold self-end text-gray-700 dark:text-gray-300
-                          text-right bg-blue-200 min-w-fit max-w-11/12 break-words "
-                        >
-                          {msg.receiver}
-                        </span>
-                      )}
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </CardFooter>
-        </Card>
-      </div>
+        {/* Chat Messages */}
+        <div className="flex-1 overflow-y-auto p-4 bg-gray-50">
+          <div className="space-y-2 w-full">
+            {messages.map((msg, index) => (
+              <div
+                key={index}
+                className={`flex  break-words ${
+                  msg.sender === "user" ? "justify-end" : "justify-start"
+                }`}
+              >
+                <div
+                  className={`max-w-xs p-3 rounded-lg shadow-md ${
+                    msg.sender === "user"
+                      ? "bg-blue-500 text-white"
+                      : "bg-gray-200 text-gray-900"
+                  }`}
+                >
+                  {msg.text}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </Card>
     </div>
   );
 }
 
-export default Page;
+export default ChatPage;
